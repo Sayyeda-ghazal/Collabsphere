@@ -20,9 +20,14 @@ class CustomUserManager(BaseUserManager):
 
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
-    # Add fields like email, full_name, is_active, is_staff
-    # Set USERNAME_FIELD = 'email'
-    # Set REQUIRED_FIELDS = ['full_name']
-    # Set objects = CustomUserManager()
-    # Define __str__ method
-    pass
+    email = models.EmailField(unique=True)
+    full_name = models.CharField(max_length= 255)
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default= False)
+
+    objects = CustomUserManager()
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['full_name']
+
+    def __str__(self):
+        return self.email
