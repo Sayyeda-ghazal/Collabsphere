@@ -51,6 +51,12 @@ INSTALLED_APPS = [
     'core',
 ]
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -66,7 +72,7 @@ ROOT_URLCONF = 'collabsphere.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'accounts' / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -87,8 +93,12 @@ WSGI_APPLICATION = 'collabsphere.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'collabsphere_db',        # Your DB name
+        'USER': 'postgres',       # Your PostgreSQL user
+        'PASSWORD': config('PASSWORD'),   # Your PostgreSQL password
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
 
@@ -131,5 +141,6 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
+STATICFILES_DIRS = [BASE_DIR / "accounts" / "static"]
 
 AUTH_USER_MODEL = 'accounts.CustomUser'
