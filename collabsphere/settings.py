@@ -144,3 +144,5 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / "accounts" / "static"]
 
 AUTH_USER_MODEL = 'accounts.CustomUser'
+
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
