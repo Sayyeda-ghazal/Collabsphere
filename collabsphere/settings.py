@@ -149,3 +149,8 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+PUSHER_APP_ID = config("PUSHER_APP_ID")
+PUSHER_KEY = config("PUSHER_KEY")
+PUSHER_SECRET = config("PUSHER_SECRET")
+PUSHER_CLUSTER = config("PUSHER_CLUSTER")
