@@ -2,7 +2,8 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from workspaces.models import Membership
+from accounts.models import CustomUser
+from workspaces.models import Membership, Workspace
 from .models import ChatRoom, ChatMessage
 from .serializers import ChatRoomSerializer, ChatMessageSerializer
 from django.shortcuts import get_object_or_404
@@ -26,15 +27,23 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
         return ChatRoom.objects.filter(members=self.request.user)
 
     def perform_create(self, serializer):
-        workspace = serializer.save(created_by=self.request.user)
-        Membership.objects.create(user=self.request.user, workspace=workspace, role='admin')
+        workspace = serializer.validated_data.get("workspace")
+        members = serializer.validated_data.get("members", [])
 
-        room = ChatRoom.objects.create(
-            workspace=workspace,
-            name=f"{workspace.name} Chat",
-            is_group=True
-        )
-        room.members.add(self.request.user)
+        if not Membership.objects.filter(workspace=workspace, user=self.request.user).exists():
+            raise PermissionDenied("You are not a member of this workspace.")
+
+        # Validate members are part of workspace
+        valid_members = CustomUser.objects.filter(
+            id__in=[member.id for member in members],
+            memberships__workspace=workspace
+        ).distinct()
+
+        chat_room = serializer.save()
+        chat_room.members.set(valid_members)
+        chat_room.members.add(self.request.user)
+
+
 
     @action(detail=True, methods=['get'])
     def messages(self, request, pk=None):
@@ -66,3 +75,19 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
         })
 
         return Response(ChatMessageSerializer(message).data, status=status.HTTP_201_CREATED)
+    
+    @action(detail=True, methods=['post'], url_path='add-member')
+    def add_member(self, request, pk=None):
+        room = self.get_object()
+
+        if not room.members.filter(id=request.user.id).exists():
+            raise PermissionDenied("You're not a member of this room.")
+
+        user_id = request.data.get("user_id")
+        try:
+            user = User.objects.get(id=user_id)
+            room.members.add(user)
+            return Response({"detail": "User added successfully."})
+        except User.DoesNotExist:
+            return Response({"detail": "User not found."}, status=404)
+

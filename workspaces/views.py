@@ -6,6 +6,8 @@ from .models import Workspace, Invitation, Membership
 from .serializers import WorkspaceSerializer, InvitationSerializer
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import get_user_model
+from django.db.models import Q
+from rest_framework.views import APIView
 
 User = get_user_model()
 
@@ -15,11 +17,25 @@ class WorkspaceViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Workspace.objects.filter(memberships__user=self.request.user).distinct()
+        return Workspace.objects.filter(
+            Q(owner=self.request.user) | Q(memberships__user=self.request.user)
+        ).distinct()
+        
 
     def perform_create(self, serializer):
         workspace = serializer.save(owner=self.request.user)
+        workspace.members.add(self.request.user)
         Membership.objects.create(user=self.request.user, workspace=workspace, role='admin')
+
+        from chat.models import ChatRoom 
+        chatroom = ChatRoom.objects.create(
+            name="General",
+            workspace=workspace,
+            is_group=True,
+            created_by=self.request.user
+        )
+        chatroom.members.add(self.request.user)
+
 
     @action(detail=True, methods=['post'], url_path='invite')
     def invite(self, request, pk=None):
@@ -39,11 +55,34 @@ class WorkspaceViewSet(viewsets.ModelViewSet):
             return Response({"detail": "Invitation sent successfully."})
         return Response(serializer.errors, status=400)
     
-    @action(detail=True, methods=['get'], url_path='members')
+    # @action(detail=True, methods=['get'], permission_classes=[IsAuthenticated])
+    # def members(self, request, pk=None):
+    #     workspace = self.get_object()
+    #     if request.user not in workspace.members.all():
+    #         return Response({"detail": "Not a member of this workspace"}, status=403)
+
+    #     users = Membership.objects.filter(user=request.user, workspace=workspace).exists()
+
+    #     data = [
+    #         {"id": user.id, "full_name": user.get_full_name(), "email": user.email}
+    #         for user in users
+    #     ]
+    #     return Response(data)
+    
+    @action(detail=True, methods=['get'], url_path='view-members')
     def view_members(self, request, pk=None):
+        print(f"User: {request.user}")
+        print(f"Workspace ID: {pk}")
+        
         workspace = self.get_object()
-        if not Membership.objects.filter(user=request.user, workspace=workspace).exists():
+        print(f"Workspace: {workspace.name}")
+        
+        if request.user.id != workspace.owner.id and not Membership.objects.filter(user=request.user, workspace=workspace).exists():
             return Response({"detail": "You are not authorized to this workspace."}, status=403)
+
+
+        print("User is a member!")
+
         members = Membership.objects.filter(workspace=workspace).select_related('user')
         data = [
             {
@@ -112,3 +151,25 @@ def accept_invitation(request, token):
     invitation.save()
 
     return Response({"detail": "You have joined the workspace."})
+
+class WorkspaceMembersView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, workspace_id):
+        try:
+            workspace = Workspace.objects.get(id=workspace_id)
+        except Workspace.DoesNotExist:
+            return Response({"detail": "Workspace not found"}, status=404)
+
+        if request.user not in workspace.members.all():
+            return Response({"detail": "You are not a member of this workspace."}, status=403)
+
+        users = workspace.members.all()
+        data = [
+            {
+                "id": user.id,
+                "full_name": user.get_full_name(),
+                "email": user.email
+            } for user in users
+        ]
+        return Response(data)

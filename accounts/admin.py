@@ -1,3 +1,4 @@
 from django.contrib import admin
+from workspaces.models import Workspace  # Import your model
 
-# Register your models here.
+admin.site.register(Workspace)

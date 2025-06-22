@@ -45,11 +45,11 @@ INSTALLED_APPS = [
     'accounts',
     'workspaces',
     'documents',
-    'tasks',
     'chat',
-    'notifications',
-    'core',
+
 ]
+
+INSTALLED_APPS += ["corsheaders"]
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -65,6 +65,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.common.CommonMiddleware",
 ]
 
 ROOT_URLCONF = 'collabsphere.urls'
@@ -142,7 +144,7 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 STATICFILES_DIRS = [BASE_DIR / "accounts" / "static"]
-
+CORS_ALLOW_ALL_ORIGINS = True
 AUTH_USER_MODEL = 'accounts.CustomUser'
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
